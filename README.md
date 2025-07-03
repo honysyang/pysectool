@@ -10,16 +10,14 @@
 ```plaintext
     pysectool/ 
       Readme.md 
-      Readme.txt 
-      build/ 
-        lib/ 
-          packager.py 
+      Readme.txt      
       example.so 
       example1.py 
       example1.so 
-      main.py 
-      packager.py 
-      setup.py 
+      main.py
+      banner.txt         #banner文件
+      packager.py        #打包工具
+      setup.py           
   ```    
 
 ## 打包格式支持
@@ -33,7 +31,7 @@
 
 ## 使用说明
 ```bash
-python packager.py <source_file> -o <output_dir> -f <format> [--no-deps] [--no-optimize]
+python packager.py <source_file> -o <output_dir> -f <format> [--no-deps] [--no-optimize] -b <banner>
 ```
 
 ## 参数说明
@@ -42,6 +40,7 @@ python packager.py <source_file> -o <output_dir> -f <format> [--no-deps] [--no-o
 -f, --format: 打包格式，支持 pyd, so, exe，默认为 pyd。
 --no-deps: 不包含依赖。
 --no-optimize: 不优化代码。
+-b 制定banner文件
 
 
 ## 用例1
@@ -87,6 +86,19 @@ if __name__ == "__main__":
 请输入要检测的 IP 地址: 10.1.2.100
 IP 10.1.2.100 可以 ping 通。
 ```
+
+## 用例2
+```bash
+python setup.py install
+```
+```bash
+python-packager example1.py -o . -f so -b banner.txt  #生成example1.so
+```
+```bash
+python main.py
+```
+![image](https://github.com/user-attachments/assets/ad393761-5eda-4ab0-8ad0-9f9159d39d5f)
+
 
 ## IDA调试
 用例example1.so
