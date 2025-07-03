@@ -87,3 +87,9 @@ if __name__ == "__main__":
 请输入要检测的 IP 地址: 10.1.2.100
 IP 10.1.2.100 可以 ping 通。
 ```
+
+## IDA调试
+用例example1.so
+解析后内容如下：
+![image](https://github.com/user-attachments/assets/bbbb4ebf-1cfa-4026-9876-cfb62eac9709)
+
