@@ -45,6 +45,6 @@ setup(
     ],
     python_requires='>=3.7',
     project_urls={
-        'Source': 'https://github.com/yourusername/python-packager',  # 替换为实际项目链接
+        'Source': 'https://github.com/honysyang/pysectool',  # 替换为实际项目链接
     },
 )
