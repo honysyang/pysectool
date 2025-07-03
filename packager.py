@@ -12,7 +12,7 @@ class PythonPackager:
     """Python 源文件打包工具"""
     
     def __init__(self, source_file, output_dir=None, package_format='pyd', 
-                 include_deps=True, optimize=True):
+                 include_deps=True, optimize=True, banner_file=None):
         """初始化打包器
         
         Args:
@@ -21,20 +21,23 @@ class PythonPackager:
             package_format: 打包格式，支持 'pyd'、'so'、'exe'
             include_deps: 是否包含依赖
             optimize: 是否优化代码
+            banner_file: 是否打印banner
         """
         self.source_file = Path(source_file).absolute()
         self.output_dir = Path(output_dir).absolute() if output_dir else self.source_file.parent
         self.package_format = package_format
         self.include_deps = include_deps
         self.optimize = optimize
+        self.banner_file = Path(banner_file).absolute() if banner_file else None
         
         # 确保源文件存在
         if not self.source_file.exists():
             raise FileNotFoundError(f"源文件不存在: {self.source_file}")
             
         # 确保源文件是 Python 文件
-        if self.source_file.suffix.lower() != '.py':
-            raise ValueError(f"源文件必须是 Python 文件 (.py)，但得到: {self.source_file.suffix}")
+        if not self.source_file.suffixes[-1].lower() == '.py':
+            print(self.source_file.suffixes[-1].lower())
+            raise ValueError(f"源文件必须是 Python 文件 (.py)，但得到: {self.source_file.suffixes[-1]}")
             
         # 创建输出目录
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -81,11 +84,43 @@ class PythonPackager:
     def package_with_cython(self):
         """使用 Cython 打包为动态库"""
         print(f"正在使用 Cython 打包 {self.source_file} 为 {self.package_format}...")
-        
+    
         # 复制源文件到临时目录
         temp_source = self.temp_dir / self.source_file.name
         shutil.copy2(self.source_file, temp_source)
+    
+        # 读取 banner 文件内容
+        banner_content = ''
+        if self.banner_file and self.banner_file.exists(): 
+            try:
+                with open(self.banner_file, 'r', encoding='utf-8') as f:
+                    banner_content = f.read()
+            except Exception as e:
+                print(f"读取 banner 文件失败: {e}")
+
+        # 在源文件开头插入 banner 内容，放在多行注释中
+        if banner_content:
+            banner_content = f'\n{banner_content}\n'
         
+        # print(banner_content)
+
+        # 以二进制模式读取和写入，避免编码问题
+        with open(temp_source, 'r+', encoding='utf-8') as f:
+            content = f.read()
+            f.seek(0, 0)
+            f.write(banner_content + content)
+            f.truncate()
+            
+        
+        # # 在源文件开头插入启动输出代码
+        # with open(temp_source, 'r+', encoding='utf-8') as f:
+        #     content = f.read()
+        #     f.seek(0, 0)
+        #     f.write('print("============================= 电鳗AI检测套装 ====================================")\n' + 
+        #             'print("===================版权所有：北京模糊智能科技有限责任公司==========================")\n'+ content)
+
+
+    
         # 生成 setup.py
         setup_py = self.temp_dir / "setup.py"
         module_name = self.source_file.stem
@@ -315,15 +350,17 @@ def main():
                         help='打包格式，默认为 pyd')
     parser.add_argument('--no-deps', action='store_true', help='不包含依赖')
     parser.add_argument('--no-optimize', action='store_true', help='不优化代码')
-    
+    parser.add_argument('-b', '--banner', help='banner 文件路径')
+
     args = parser.parse_args()
-    
+
     packager = PythonPackager(
         source_file=args.source_file,
         output_dir=args.output,
         package_format=args.format,
         include_deps=not args.no_deps,
-        optimize=not args.no_optimize
+        optimize=not args.no_optimize,
+        banner_file=args.banner
     )
     
     result = packager.run()
@@ -335,4 +372,4 @@ def main():
         sys.exit(1)
 
 if __name__ == "__main__":
-    main()    
+    main()
