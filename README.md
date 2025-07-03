@@ -43,7 +43,7 @@ python packager.py <source_file> -o <output_dir> -f <format> [--no-deps] [--no-o
 -b 制定banner文件
 
 
-## 用例1
+## 用例1：将python源文件打包为so文件，并在其他地方调用
 ```bash
 python setup.py install
 ```
@@ -87,7 +87,7 @@ if __name__ == "__main__":
 IP 10.1.2.100 可以 ping 通。
 ```
 
-## 用例2
+## 用例2：自定义banner，确保打包工具打包后的文件，在使用时，均会输出该banner
 ```bash
 python setup.py install
 ```
