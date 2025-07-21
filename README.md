@@ -15,9 +15,9 @@
       example1.py 
       example1.so 
       main.py
-      banner.txt         #banner文件
+      banner.txt            #banner文件
       packager_v1.py        #打包工具 v1版   提供给python文件打包为so文件功能
-      packager_v2.py        $打包工具 v2版   提供给python文件夹打包为so文件功能
+      packager_v2.py        #打包工具 v2版   提供给python文件夹打包为so文件功能
       setup.py           
   ```    
 
