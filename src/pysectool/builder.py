@@ -11,7 +11,10 @@ import tempfile
 from pathlib import Path
 
 from pysectool.exceptions import PythonPackagerError
+from pysectool.log import get_logger
 from pysectool.utils import cython_module_name, DataCollector
+
+logger = get_logger()
 
 
 class SourcePreparer:
@@ -144,7 +147,7 @@ setup(
     def build(self) -> Path:
         """执行 Cython 打包。"""
         self._check_cython()
-        print(f"正在使用 Cython 打包 {self.source_path} 为 so/pyd...")
+        logger.info("正在使用 Cython 打包 %s 为 so/pyd...", self.source_path)
 
         package_name = (
             self.source_path.name if self.source_path.is_dir() else self.source_path.stem
@@ -175,8 +178,14 @@ setup(
             try:
                 subprocess.run(cmd, cwd=src_dir, check=True, capture_output=True, text=True)
             except subprocess.CalledProcessError as exc:
-                msg = f"Cython 编译失败:\n{exc.stderr}" if exc.stderr else "Cython 编译失败"
-                raise PythonPackagerError(msg) from exc
+                if exc.stdout:
+                    logger.debug("Cython stdout:\n%s", exc.stdout)
+                if exc.stderr:
+                    logger.debug("Cython stderr:\n%s", exc.stderr)
+                summary = self._extract_cython_error(exc.stderr or exc.stdout)
+                raise PythonPackagerError(
+                    f"Cython 编译失败: {summary}"
+                ) from exc
 
             dyn_libs = list(build_lib.rglob(f"*{ext}"))
             if not dyn_libs:
@@ -187,10 +196,25 @@ setup(
                 output_file = self.output_dir / rel
                 output_file.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(dyn_lib, output_file)
-                print(f"成功生成: {output_file}")
+                logger.info("成功生成动态库: %s", rel)
 
             self._copy_data_files()
             return self.output_dir
+
+    @staticmethod
+    def _extract_cython_error(output: str) -> str:
+        """从 Cython 输出中提取用户可读的简短错误信息。"""
+        lines = output.strip().splitlines()
+        # 优先定位到 CompileError 行或文件错误行
+        for line in reversed(lines):
+            if "CompileError" in line:
+                return line.split("CompileError:")[-1].strip()
+        for line in reversed(lines):
+            if ":" in line and any(
+                keyword in line for keyword in ("Error", "error", "SyntaxError")
+            ):
+                return line.strip()
+        return lines[-1] if lines else "未知错误，请使用 -v 查看详细日志"
 
     def _copy_data_files(self) -> None:
         """将源目录中的数据文件复制到输出目录，保持相对结构。"""
@@ -202,13 +226,13 @@ setup(
         if not data_files:
             return
 
-        print(f"正在复制 {len(data_files)} 个数据文件...")
+        logger.info("正在复制 %d 个数据文件...", len(data_files))
         for src_file, rel_path in data_files:
             # 数据文件应放在与编译后的包同级目录下，保持包内相对路径
             output_file = self.output_dir / self.source_path.name / rel_path
             output_file.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src_file, output_file)
-            print(f"  复制: {output_file}")
+            logger.info("  复制数据文件: %s", self.source_path.name / rel_path)
 
 
 class PyInstallerBuilder:
@@ -236,7 +260,7 @@ class PyInstallerBuilder:
     def build(self) -> Path:
         """执行 PyInstaller 打包。"""
         self._check_pyinstaller()
-        print(f"正在使用 PyInstaller 打包 {self.source_path} 为可执行文件...")
+        logger.info("正在使用 PyInstaller 打包 %s 为可执行文件...", self.source_path)
 
         output_name = self.source_path.stem
         ext = ".exe" if os.name == "nt" else ""
@@ -271,15 +295,30 @@ class PyInstallerBuilder:
             try:
                 subprocess.run(cmd, check=True, capture_output=True, text=True)
             except subprocess.CalledProcessError as exc:
-                msg = f"PyInstaller 打包失败:\n{exc.stderr}" if exc.stderr else "PyInstaller 打包失败"
-                raise PythonPackagerError(msg) from exc
+                if exc.stdout:
+                    logger.debug("PyInstaller stdout:\n%s", exc.stdout)
+                if exc.stderr:
+                    logger.debug("PyInstaller stderr:\n%s", exc.stderr)
+                summary = self._extract_pyinstaller_error(exc.stderr or exc.stdout)
+                raise PythonPackagerError(
+                    f"PyInstaller 打包失败: {summary}"
+                ) from exc
 
             output_file = self.output_dir / output_name / f"{output_name}{ext}"
             if not output_file.exists() and not self.include_deps:
                 output_file = self.output_dir / f"{output_name}{ext}"
 
             if output_file.exists():
-                print(f"成功生成: {output_file}")
+                logger.info("成功生成可执行文件: %s", output_file.relative_to(self.output_dir))
                 return output_file
 
             raise PythonPackagerError("找不到生成的可执行文件")
+
+    @staticmethod
+    def _extract_pyinstaller_error(output: str) -> str:
+        """从 PyInstaller 输出中提取用户可读的简短错误信息。"""
+        lines = output.strip().splitlines()
+        for line in reversed(lines):
+            if "Error" in line or "error" in line or "Exception" in line:
+                return line.strip()
+        return lines[-1] if lines else "未知错误，请使用 -v 查看详细日志"

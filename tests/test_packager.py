@@ -53,6 +53,11 @@ class TestValidation(unittest.TestCase):
             with self.assertRaises(PythonPackagerError):
                 PythonPackager(src)
 
+    def test_traversal_source_rejected(self) -> None:
+        """源路径包含目录穿越时应抛出异常。"""
+        with self.assertRaises(PythonPackagerError):
+            PythonPackager("../../etc/passwd")
+
 
 class TestOrchestration(unittest.TestCase):
     """测试打包编排流程。"""
@@ -106,3 +111,49 @@ class TestPackagerWithDataFiles(unittest.TestCase):
             core = importlib.import_module("myproject.core")  # pylint: disable=import-error
 
             self.assertEqual(core.read_config(), '{"env": "prod"}')
+
+
+@unittest.skipUnless(importlib.util.find_spec("Cython") is not None, "需要安装 Cython")
+class TestPackagerStability(unittest.TestCase):
+    """打包稳定性测试。"""
+
+    def test_clean_clears_output_dir(self) -> None:
+        """--clean 应在打包前清空输出目录。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            pkg = Path(tmp) / "pkg"
+            pkg.mkdir()
+            (pkg / "__init__.py").write_text("__version__ = '1.0'\n", encoding="utf-8")
+
+            output_dir = Path(tmp) / "dist"
+            output_dir.mkdir()
+            (output_dir / "old_file.txt").write_text("old", encoding="utf-8")
+            (output_dir / "old_dir").mkdir()
+
+            packager_instance = PythonPackager(
+                pkg, output_dir=output_dir, package_format="so", clean=True
+            )
+            packager_instance.run()
+
+            self.assertFalse((output_dir / "old_file.txt").exists())
+            self.assertFalse((output_dir / "old_dir").exists())
+            self.assertTrue(
+                list(output_dir.glob("pkg/*.so")) or list(output_dir.glob("pkg/*.pyd"))
+            )
+
+    def test_failed_build_does_not_pollute_output(self) -> None:
+        """构建失败时不应污染输出目录。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            src = Path(tmp) / "bad.py"
+            # 写入 Cython 无法编译的内容
+            src.write_text("def foo( -> pass\n", encoding="utf-8")
+            output_dir = Path(tmp) / "dist"
+
+            packager_instance = PythonPackager(
+                src, output_dir=output_dir, package_format="so"
+            )
+            with self.assertRaises(PythonPackagerError):
+                packager_instance.run()
+
+            # 输出目录应不存在或为空
+            if output_dir.exists():
+                self.assertEqual(list(output_dir.iterdir()), [])

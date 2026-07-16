@@ -8,7 +8,10 @@ import sys
 from pathlib import Path
 from typing import Iterable
 
+from pysectool.log import get_logger
 from pysectool.utils import collect_python_files
+
+logger = get_logger()
 
 
 class DependencyAnalyzer:
@@ -86,7 +89,7 @@ def collect_dependency_files(dependencies: Iterable[str]) -> list[tuple[Path, st
     for dep in dependencies:
         located = analyzer.locate_dependency(dep)
         if located is None:
-            print(f"  警告: 无法定位依赖 {dep}，跳过")
+            logger.warning("  无法定位依赖 %s，跳过", dep)
             continue
 
         origin, is_package = located
@@ -104,6 +107,6 @@ def collect_dependency_files(dependencies: Iterable[str]) -> list[tuple[Path, st
         elif origin.suffix in {".py", ".so", ".pyd"}:
             files.append((origin, f"deps/{origin.name}"))
         else:
-            print(f"  警告: 依赖 {dep} 类型未知，跳过")
+            logger.warning("  依赖 %s 类型未知，跳过", dep)
 
     return files

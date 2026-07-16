@@ -94,11 +94,14 @@ python-packager <source_path> -o <output_dir> -f <format> [--no-deps] [--no-opti
 |------|------|
 | `source_path` | 要打包的 Python 源文件或文件夹路径 |
 | `-o, --output` | 输出目录 |
-| `-f, --format` | 打包格式：`pyd`、`so`、`exe`，默认为 `so` |
-| `--no-deps` | 不包含依赖分析 |
-| `--no-optimize` | 关闭 Cython 优化选项 |
+| `-f, --format` | 打包格式：`pyd`、`so`、`exe`，默认根据平台自动选择（Windows 为 `pyd`，其他为 `so`） |
+| `--deps` / `--no-deps` | 是否包含依赖分析（默认 `--deps`） |
+| `--optimize` / `--no-optimize` | 是否开启 Cython 优化（默认 `--optimize`） |
 | `-b, --banner` | banner 文件路径，打包后导入时会先输出该 banner |
 | `--exclude-data` | 排除的数据文件 glob 模式（可多次使用，如 `--exclude-data '*.log'`） |
+| `--clean` | 打包前清空输出目录 |
+| `-v, --verbose` | 输出 DEBUG 级别详细日志 |
+| `-q, --quiet` | 只输出错误信息 |
 
 也支持模块方式运行：
 
@@ -125,10 +128,11 @@ print(f"输出: {result}")
 
 ## 用例
 
-### 用例 1：将单个 Python 文件打包为 .so
+### 用例 1：将单个 Python 文件打包为动态库
 
 ```bash
-python-packager examples/example1.py -o ./dist -f so
+# Linux/macOS 默认生成 .so，Windows 默认生成 .pyd
+python-packager examples/example1.py -o ./dist
 ```
 
 生成 `dist/example1.cpython-xxx-x86_64-linux-gnu.so`，可在其他程序中导入：
@@ -151,7 +155,7 @@ python-packager examples/example1.py -o ./dist -f so -b examples/banner.txt
 ### 用例 3：打包整个 Python 包目录（自动保留数据文件）
 
 ```bash
-python-packager my_package/ -o ./dist -f so
+python-packager my_package/ -o ./dist --clean
 ```
 
 目录结构会被保留，生成的动态库可直接作为包导入。包内的数据文件（如 `.json`、`.yaml`、模板、图片等）会自动复制到输出目录，保持相对路径不变：
@@ -174,6 +178,24 @@ import my_package.core
 ```bash
 python-packager examples/example1.py -o ./dist -f exe
 ```
+
+## 日志控制
+
+```bash
+# 查看详细日志
+python-packager examples/example1.py -o ./dist -v
+
+# 静默模式，只输出错误
+python-packager examples/example1.py -o ./dist -q
+```
+
+## 稳定性特性
+
+- **路径安全**：自动拒绝包含目录穿越（`..`）的输入路径
+- **输出目录校验**：构建前检查输出目录是否可写，避免构建到一半失败
+- **原子输出**：先写入临时 staging 目录，成功后再发布到最终输出目录
+- **失败回滚**：构建失败时自动清理临时产物，不污染输出目录
+- **完整错误信息**：子进程失败时同时输出 stdout 与 stderr
 
 ## 开发与测试
 
