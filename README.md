@@ -1,108 +1,125 @@
 # Python 源文件打包工具
 
-## 项目初衷
-为保护python源文件程序的知识产权，避免被不法分子直接剽窃
+[![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/)
 
 ## 项目简介
-这是一个 Python 源文件打包工具，支持将 Python 文件打包为动态库（pyd/so）、可执行文件（exe）以及 ZIP 包。工具能够分析依赖并在打包时包含依赖文件。
+
+`python-packager` 是一个 Python 源码保护/打包工具，可将 Python 源文件或整个包目录打包为：
+
+- 动态库：`.pyd`（Windows）/ `.so`（Linux/macOS）
+- 可执行文件：`.exe`（Windows）/ 无后缀可执行文件（Unix）
+- 含依赖的 ZIP 包
+
+打包过程基于 [Cython](https://cython.org/) 或 [PyInstaller](https://pyinstaller.org/)，可在一定程度上提高源码被直接阅读的难度。
+
+> ⚠️ 注意：Cython/PyInstaller 打包只能提高逆向门槛，无法做到绝对防反编译或反汇编。如需更高强度保护，请结合代码混淆、加密、授权校验等手段。
 
 ## 项目结构
+
 ```plaintext
-    pysectool/ 
-      Readme.md 
-      Readme.txt      
-      example.so 
-      example1.py 
-      example1.so 
-      main.py
-      banner.txt            #banner文件
-      packager_v1.py        #打包工具 v1版   提供给python文件打包为so文件功能
-      packager_v2.py        #打包工具 v2版   提供给python文件夹打包为so文件功能
-      setup.py           
-  ```    
+pysectool/
+├── README.md           # 项目说明
+├── setup.py            # 安装配置
+├── packager.py         # 核心打包模块
+├── main.py             # 调用示例（导入打包后的 .so）
+├── example1.py         # 示例源文件
+├── banner.txt          # banner 示例
+└── tests/              # 基础测试
+    ├── __init__.py
+    └── test_packager.py
+```
 
-## 打包格式支持
-- pyd/so : 使用 Cython 打包为动态库。
-- exe : 使用 PyInstaller 打包为可执行文件。
-- ZIP : 包含依赖时会自动创建包含主模块和依赖的 ZIP 包。
+## 安装
 
-## 支持二开
-支持添加混淆、反调试、反分析、加密等安全功能。
+```bash
+# 基础安装
+python setup.py install
 
+# 或同时安装所有可选依赖（推荐）
+pip install -e ".[all]"
+```
+
+### 可选依赖
+
+- 打包为 `.pyd` / `.so`：`pip install Cython`
+- 打包为可执行文件：`pip install pyinstaller`
 
 ## 使用说明
+
 ```bash
-python packager.py <source_file> -o <output_dir> -f <format> [--no-deps] [--no-optimize] -b <banner>
+python-packager <source_path> -o <output_dir> -f <format> [--no-deps] [--no-optimize] [-b banner_file]
 ```
 
-## 参数说明
-<source_file>: 要打包的 Python 源文件路径。
--o, --output: 输出目录。
--f, --format: 打包格式，支持 pyd, so, exe，默认为 pyd。
---no-deps: 不包含依赖。
---no-optimize: 不优化代码。
--b 制定banner文件
+### 参数说明
 
+| 参数 | 说明 |
+|------|------|
+| `source_path` | 要打包的 Python 源文件或文件夹路径 |
+| `-o, --output` | 输出目录 |
+| `-f, --format` | 打包格式：`pyd`、`so`、`exe`，默认为 `so` |
+| `--no-deps` | 不包含依赖分析 |
+| `--no-optimize` | 关闭 Cython 优化选项 |
+| `-b, --banner` | banner 文件路径，打包后导入时会先输出该 banner |
 
-## 用例1：将python源文件打包为so文件，并在其他地方调用
+## 用例
+
+### 用例 1：将单个 Python 文件打包为 .so
+
 ```bash
-python setup.py install
+python-packager example1.py -o ./dist -f so
 ```
 
-example1.py 内容如下：
-```bash
-import subprocess
-def check_ping(): 
-    """要求用户输入 IP 地址，并检测该 IP 是否可以 ping 通"""
-    ip = input("请输入要检测的 IP 地址: ")
-    try:
-        # 在 Linux 系统上使用 ping 命令，发送 4 个数据包
-        result = subprocess.run(['ping', '-c', '4', ip], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        if result.returncode == 0:
-            print(f"IP {ip} 可以 ping 通。")
-        else:
-            print(f"IP {ip} 无法 ping 通。")
-    except Exception as e:
-        print(f"检测过程中出现错误: {e}")
+生成 `dist/example1.so`，可在其他程序中导入：
 
-if __name__ == "__main__":
-    check_ping()
-```
-
-```bash
-python-packager example1.py -o . -f so   #生成example1.so
-```
-
-main程序调用example1.so
-
-```bash
+```python
 import example1
 
 if __name__ == "__main__":
     example1.check_ping()
 ```
 
-```bash
-(venv) (base) root@uweic:/home/workspace/pysectool# python main.py 
-请输入要检测的 IP 地址: 10.1.2.100
-IP 10.1.2.100 可以 ping 通。
+### 用例 2：自定义 banner
+
+`banner.txt` 内容示例：
+
+```text
+电鳗AI检测套装
+版权所有：北京模糊智能科技有限责任公司
 ```
 
-## 用例2：自定义banner，确保打包工具打包后的文件，在使用时，均会输出该banner
-```bash
-python setup.py install
-```
-```bash
-python-packager example1.py -o . -f so -b banner.txt  #生成example1.so
-```
-```bash
-python main.py
-```
-![image](https://github.com/user-attachments/assets/ad393761-5eda-4ab0-8ad0-9f9159d39d5f)
+打包：
 
+```bash
+python-packager example1.py -o ./dist -f so -b banner.txt
+```
 
-## IDA调试
-用例example1.so
-解析后内容如下：
-![image](https://github.com/user-attachments/assets/bbbb4ebf-1cfa-4026-9876-cfb62eac9709)
+导入生成的 `.so` 时会先输出 banner。
 
+### 用例 3：打包整个 Python 包目录
+
+```bash
+python-packager my_package/ -o ./dist -f so
+```
+
+### 用例 4：打包为可执行文件
+
+```bash
+python-packager example1.py -o ./dist -f exe
+```
+
+## 安全说明
+
+示例 `example1.py` 中对用户输入进行了严格的 IP 格式校验，禁止通过输入注入额外命令。请勿在真实工具中把用户输入直接拼接到 `subprocess` 调用中。
+
+## 扩展方向
+
+本项目预留了扩展接口，可在打包流程中集成：
+
+- 源码混淆
+- 运行时代码加密/解密
+- 反调试检测
+- 授权与指纹校验
+
+## 许可证
+
+GNU General Public License v3 (GPLv3)
