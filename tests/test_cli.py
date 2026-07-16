@@ -33,6 +33,14 @@ class TestArgumentParser(unittest.TestCase):
         with self.assertRaises(SystemExit):
             parser.parse_args(["foo.py", "-f", "zip"])
 
+    def test_exclude_data_parsed(self) -> None:
+        """--exclude-data 应支持多次使用并收集为列表。"""
+        parser = create_parser()
+        args = parser.parse_args(
+            ["foo.py", "--exclude-data", "*.log", "--exclude-data", "temp/*"]
+        )
+        self.assertEqual(args.exclude_data, ["*.log", "temp/*"])
+
 
 class TestMainEntry(unittest.TestCase):
     """测试 main 入口。"""

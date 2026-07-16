@@ -98,6 +98,7 @@ python-packager <source_path> -o <output_dir> -f <format> [--no-deps] [--no-opti
 | `--no-deps` | 不包含依赖分析 |
 | `--no-optimize` | 关闭 Cython 优化选项 |
 | `-b, --banner` | banner 文件路径，打包后导入时会先输出该 banner |
+| `--exclude-data` | 排除的数据文件 glob 模式（可多次使用，如 `--exclude-data '*.log'`） |
 
 也支持模块方式运行：
 
@@ -147,18 +148,26 @@ python-packager examples/example1.py -o ./dist -f so -b examples/banner.txt
 
 导入生成的 `.so` 时会先输出 banner。
 
-### 用例 3：打包整个 Python 包目录
+### 用例 3：打包整个 Python 包目录（自动保留数据文件）
 
 ```bash
 python-packager my_package/ -o ./dist -f so
 ```
 
-目录结构会被保留，生成的动态库可直接作为包导入：
+目录结构会被保留，生成的动态库可直接作为包导入。包内的数据文件（如 `.json`、`.yaml`、模板、图片等）会自动复制到输出目录，保持相对路径不变：
 
 ```python
 import my_package
 import my_package.core
+
+# 如果源码中通过 __file__ 或 importlib.resources 读取数据文件，路径无需修改
 ```
+
+> 默认会自动排除 `__pycache__`、`.pyc`、`.git*`、`.env*`、`secrets.*` 等文件。如需额外排除某些数据文件，使用 `--exclude-data`：
+>
+> ```bash
+> python-packager my_package/ -o ./dist -f so --exclude-data '*.log' --exclude-data 'drafts/*'
+> ```
 
 ### 用例 4：打包为可执行文件
 

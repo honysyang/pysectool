@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 
 from pysectool.exceptions import PythonPackagerError
-from pysectool.utils import cython_module_name
+from pysectool.utils import cython_module_name, DataCollector
 
 
 class SourcePreparer:
@@ -58,11 +58,13 @@ class CythonBuilder:
         output_dir: Path,
         optimize: bool,
         banner: str,
+        exclude_data: list[str] | None = None,
     ) -> None:
         self.source_path = source_path
         self.output_dir = output_dir
         self.optimize = optimize
         self.banner = banner
+        self.exclude_data = exclude_data or []
 
     @staticmethod
     def _check_cython() -> None:
@@ -187,7 +189,26 @@ setup(
                 shutil.copy2(dyn_lib, output_file)
                 print(f"成功生成: {output_file}")
 
+            self._copy_data_files()
             return self.output_dir
+
+    def _copy_data_files(self) -> None:
+        """将源目录中的数据文件复制到输出目录，保持相对结构。"""
+        if self.source_path.is_file():
+            return
+
+        collector = DataCollector(self.source_path, self.exclude_data)
+        data_files = collector.collect()
+        if not data_files:
+            return
+
+        print(f"正在复制 {len(data_files)} 个数据文件...")
+        for src_file, rel_path in data_files:
+            # 数据文件应放在与编译后的包同级目录下，保持包内相对路径
+            output_file = self.output_dir / self.source_path.name / rel_path
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src_file, output_file)
+            print(f"  复制: {output_file}")
 
 
 class PyInstallerBuilder:

@@ -1,6 +1,7 @@
 """打包后端模块测试。"""
 
 import ast
+import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
@@ -113,3 +114,46 @@ class TestCythonBuilder(unittest.TestCase):
                     "{'name': 'mypkg.__init__', 'source': 'mypkg/__init__.pyx'}", text
                 )
                 self.assertIn("{'name': 'mypkg.core', 'source': 'mypkg/core.pyx'}", text)
+
+
+@unittest.skipUnless(importlib.util.find_spec("Cython") is not None, "需要安装 Cython")
+class TestCythonBuilderIntegration(unittest.TestCase):
+    """CythonBuilder 集成测试（需要 Cython）。"""
+
+    def test_build_copies_data_files(self) -> None:
+        """打包目录时应自动复制数据文件到输出目录。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            pkg = Path(tmp) / "mypkg"
+            pkg.mkdir()
+            (pkg / "__init__.py").write_text("__version__ = '1.0'\n", encoding="utf-8")
+            (pkg / "data").mkdir()
+            (pkg / "data" / "config.json").write_text('{"key": "value"}', encoding="utf-8")
+
+            output_dir = Path(tmp) / "dist"
+            builder = CythonBuilder(pkg, output_dir, optimize=True, banner="")
+            builder.build()
+
+            copied_data = output_dir / "mypkg" / "data" / "config.json"
+            self.assertTrue(copied_data.exists())
+            self.assertEqual(
+                copied_data.read_text(encoding="utf-8"),
+                '{"key": "value"}',
+            )
+
+    def test_build_respects_exclude_data(self) -> None:
+        """--exclude-data 应排除指定数据文件。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            pkg = Path(tmp) / "mypkg"
+            pkg.mkdir()
+            (pkg / "__init__.py").write_text("", encoding="utf-8")
+            (pkg / "keep.json").write_text("{}", encoding="utf-8")
+            (pkg / "skip.log").write_text("log", encoding="utf-8")
+
+            output_dir = Path(tmp) / "dist"
+            builder = CythonBuilder(
+                pkg, output_dir, optimize=True, banner="", exclude_data=["*.log"]
+            )
+            builder.build()
+
+            self.assertTrue((output_dir / "mypkg" / "keep.json").exists())
+            self.assertFalse((output_dir / "mypkg" / "skip.log").exists())

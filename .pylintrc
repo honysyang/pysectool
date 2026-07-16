@@ -5,8 +5,8 @@ ignore-paths=^examples/
 max-line-length=100
 
 [DESIGN]
-max-args=7
-max-positional-arguments=7
+max-args=8
+max-positional-arguments=8
 max-attributes=10
 max-locals=20
 

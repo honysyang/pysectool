@@ -22,6 +22,7 @@ class PythonPackager:
         include_deps: bool = True,
         optimize: bool = True,
         banner_file: str | Path | None = None,
+        exclude_data: list[str] | None = None,
     ) -> None:
         """初始化打包器。
 
@@ -32,6 +33,7 @@ class PythonPackager:
             include_deps: 是否包含依赖。
             optimize: 是否优化代码。
             banner_file: banner 文件路径。
+            exclude_data: 要排除的数据文件 glob 模式列表。
         """
         self.source_path = Path(source_path).resolve()
         self.output_dir = (
@@ -41,6 +43,7 @@ class PythonPackager:
         self.include_deps = include_deps
         self.optimize = optimize
         self.banner_file = Path(banner_file).resolve() if banner_file else None
+        self.exclude_data = exclude_data or []
 
         self._validate()
         self.banner = BannerLoader(self.banner_file).load()
@@ -92,6 +95,7 @@ class PythonPackager:
                 self.output_dir,
                 self.optimize,
                 self.banner,
+                self.exclude_data,
             )
             return builder.build()
 

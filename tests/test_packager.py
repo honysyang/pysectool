@@ -1,5 +1,8 @@
 """打包编排器集成测试。"""
 
+import importlib
+import importlib.util
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -72,3 +75,34 @@ class TestOrchestration(unittest.TestCase):
             src.write_text("x = 1\n", encoding="utf-8")
             with self.assertRaises(PythonPackagerError):
                 PythonPackager(src, output_dir=tmp, package_format="so", banner_file=banner)
+
+
+@unittest.skipUnless(importlib.util.find_spec("Cython") is not None, "需要安装 Cython")
+class TestPackagerWithDataFiles(unittest.TestCase):
+    """带数据文件的项目打包集成测试。"""
+
+    def test_directory_build_keeps_data_files(self) -> None:
+        """目录打包后数据文件应保留并可读取。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            pkg = Path(tmp) / "myproject"
+            pkg.mkdir()
+            (pkg / "__init__.py").write_text("__version__ = '1.0'\n", encoding="utf-8")
+            (pkg / "core.py").write_text(
+                "from pathlib import Path\n"
+                "def read_config():\n"
+                "    return (Path(__file__).parent / 'data' / 'config.json').read_text()\n",
+                encoding="utf-8",
+            )
+            (pkg / "data").mkdir()
+            (pkg / "data" / "config.json").write_text('{"env": "prod"}', encoding="utf-8")
+
+            output_dir = Path(tmp) / "dist"
+            packager_instance = PythonPackager(
+                pkg, output_dir=output_dir, package_format="so"
+            )
+            packager_instance.run()
+
+            sys.path.insert(0, str(output_dir))
+            core = importlib.import_module("myproject.core")  # pylint: disable=import-error
+
+            self.assertEqual(core.read_config(), '{"env": "prod"}')

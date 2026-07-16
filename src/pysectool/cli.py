@@ -24,6 +24,12 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-deps", action="store_true", help="不包含依赖")
     parser.add_argument("--no-optimize", action="store_true", help="不优化代码")
     parser.add_argument("-b", "--banner", help="banner 文件路径")
+    parser.add_argument(
+        "--exclude-data",
+        action="append",
+        default=[],
+        help="排除的数据文件 glob 模式（可多次使用）",
+    )
     return parser
 
 
@@ -40,6 +46,7 @@ def main(argv: list[str] | None = None) -> int:
             include_deps=not args.no_deps,
             optimize=not args.no_optimize,
             banner_file=args.banner,
+            exclude_data=args.exclude_data,
         )
         result = packager.run()
     except PythonPackagerError as exc:
