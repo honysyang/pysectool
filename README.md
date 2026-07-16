@@ -1,6 +1,22 @@
 # Python 源文件打包工具
 
 [![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-GPL--3.0-green.svg)](LICENSE)
+
+> 将 Python 源码打包为动态库（.so/.pyd）或可执行文件（.exe），保护源码不被直接阅读。
+
+## 快速开始
+
+```bash
+# 1. 安装（推荐 editable + 全部可选依赖）
+pip install -e ".[all]"
+
+# 2. 打包单个文件为 .so
+python-packager examples/example1.py -o ./dist -f so
+
+# 3. 运行打包后的程序
+cd dist && python -c "import example1; example1.check_ping()"
+```
 
 ## 项目简介
 
@@ -12,7 +28,7 @@
 
 打包过程基于 [Cython](https://cython.org/) 或 [PyInstaller](https://pyinstaller.org/)，可在一定程度上提高源码被直接阅读的难度。
 
-> ⚠️ 注意：Cython/PyInstaller 打包只能提高逆向门槛，无法做到绝对防反编译或反汇编。如需更高强度保护，请结合代码混淆、加密、授权校验等手段。
+> ⚠️ **注意**：Cython/PyInstaller 打包只能提高逆向门槛，无法做到绝对防反编译或反汇编。如需更高强度保护，请结合代码混淆、加密、授权校验等手段。
 
 ## 项目结构
 
@@ -34,33 +50,45 @@ pysectool/
 │   ├── main.py
 │   └── banner.txt
 ├── README.md
-├── pyproject.toml
-├── setup.py
+├── pyproject.toml          # 现代构建配置
+├── setup.py                # 兼容旧版安装
+├── .pylintrc
 └── .gitignore
 ```
 
 ## 安装
 
-```bash
-# 现代方式（推荐）
-pip install -e ".[all]"
+### 推荐方式
 
-# 或兼容旧版
+```bash
+pip install -e ".[all]"
+```
+
+### 兼容旧版
+
+```bash
 python setup.py install
 ```
 
 ### 可选依赖
 
-- 打包为 `.pyd` / `.so`：`pip install Cython`
-- 打包为可执行文件：`pip install pyinstaller`
+如果不需要同时安装 Cython 和 PyInstaller，可以按需选择：
+
+```bash
+# 仅 Cython（用于 .so/.pyd）
+pip install -e ".[cython]"
+
+# 仅 PyInstaller（用于 .exe/可执行文件）
+pip install -e ".[pyinstaller]"
+```
 
 ## 使用说明
+
+### 命令行
 
 ```bash
 python-packager <source_path> -o <output_dir> -f <format> [--no-deps] [--no-optimize] [-b banner_file]
 ```
-
-### 参数说明
 
 | 参数 | 说明 |
 |------|------|
@@ -70,6 +98,29 @@ python-packager <source_path> -o <output_dir> -f <format> [--no-deps] [--no-opti
 | `--no-deps` | 不包含依赖分析 |
 | `--no-optimize` | 关闭 Cython 优化选项 |
 | `-b, --banner` | banner 文件路径，打包后导入时会先输出该 banner |
+
+也支持模块方式运行：
+
+```bash
+python -m pysectool examples/example1.py -o ./dist -f so
+```
+
+### Python API
+
+```python
+from pysectool import PythonPackager
+
+packager = PythonPackager(
+    source_path="examples/example1.py",
+    output_dir="./dist",
+    package_format="so",
+    include_deps=True,
+    optimize=True,
+    banner_file="examples/banner.txt",
+)
+result = packager.run()
+print(f"输出: {result}")
+```
 
 ## 用例
 
@@ -102,20 +153,30 @@ python-packager examples/example1.py -o ./dist -f so -b examples/banner.txt
 python-packager my_package/ -o ./dist -f so
 ```
 
+目录结构会被保留，生成的动态库可直接作为包导入：
+
+```python
+import my_package
+import my_package.core
+```
+
 ### 用例 4：打包为可执行文件
 
 ```bash
 python-packager examples/example1.py -o ./dist -f exe
 ```
 
-## 开发
+## 开发与测试
 
 ```bash
-# 运行测试
+# 运行单元测试
 python -m unittest discover -s tests
 
 # 运行静态检查
 pylint src tests
+
+# 编译检查
+find src tests examples -name '*.py' -exec python -m py_compile {} \;
 ```
 
 ## 安全说明
