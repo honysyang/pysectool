@@ -18,25 +18,35 @@
 
 ```plaintext
 pysectool/
-├── README.md           # 项目说明
-├── setup.py            # 安装配置
-├── packager.py         # 核心打包模块
-├── main.py             # 调用示例（导入打包后的 .so）
-├── example1.py         # 示例源文件
-├── banner.txt          # banner 示例
-└── tests/              # 基础测试
-    ├── __init__.py
-    └── test_packager.py
+├── src/
+│   └── pysectool/          # 核心包
+│       ├── __init__.py
+│       ├── __main__.py     # python -m pysectool
+│       ├── cli.py          # 命令行入口
+│       ├── packager.py     # 打包编排器
+│       ├── builder.py      # Cython / PyInstaller 构建器
+│       ├── deps.py         # 依赖分析
+│       ├── utils.py        # 工具函数
+│       └── exceptions.py   # 自定义异常
+├── tests/                  # 单元测试
+├── examples/               # 示例文件
+│   ├── example1.py
+│   ├── main.py
+│   └── banner.txt
+├── README.md
+├── pyproject.toml
+├── setup.py
+└── .gitignore
 ```
 
 ## 安装
 
 ```bash
-# 基础安装
-python setup.py install
-
-# 或同时安装所有可选依赖（推荐）
+# 现代方式（推荐）
 pip install -e ".[all]"
+
+# 或兼容旧版
+python setup.py install
 ```
 
 ### 可选依赖
@@ -66,10 +76,10 @@ python-packager <source_path> -o <output_dir> -f <format> [--no-deps] [--no-opti
 ### 用例 1：将单个 Python 文件打包为 .so
 
 ```bash
-python-packager example1.py -o ./dist -f so
+python-packager examples/example1.py -o ./dist -f so
 ```
 
-生成 `dist/example1.so`，可在其他程序中导入：
+生成 `dist/example1.cpython-xxx-x86_64-linux-gnu.so`，可在其他程序中导入：
 
 ```python
 import example1
@@ -80,17 +90,8 @@ if __name__ == "__main__":
 
 ### 用例 2：自定义 banner
 
-`banner.txt` 内容示例：
-
-```text
-电鳗AI检测套装
-版权所有：北京模糊智能科技有限责任公司
-```
-
-打包：
-
 ```bash
-python-packager example1.py -o ./dist -f so -b banner.txt
+python-packager examples/example1.py -o ./dist -f so -b examples/banner.txt
 ```
 
 导入生成的 `.so` 时会先输出 banner。
@@ -104,12 +105,22 @@ python-packager my_package/ -o ./dist -f so
 ### 用例 4：打包为可执行文件
 
 ```bash
-python-packager example1.py -o ./dist -f exe
+python-packager examples/example1.py -o ./dist -f exe
+```
+
+## 开发
+
+```bash
+# 运行测试
+python -m unittest discover -s tests
+
+# 运行静态检查
+pylint src tests
 ```
 
 ## 安全说明
 
-示例 `example1.py` 中对用户输入进行了严格的 IP 格式校验，禁止通过输入注入额外命令。请勿在真实工具中把用户输入直接拼接到 `subprocess` 调用中。
+示例 `examples/example1.py` 中对用户输入进行了严格的 IP 格式校验，禁止通过输入注入额外命令。请勿在真实工具中把用户输入直接拼接到 `subprocess` 调用中。
 
 ## 扩展方向
 

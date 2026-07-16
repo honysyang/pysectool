@@ -1,3 +1,5 @@
+"""调用打包后的 example1.so 示例。"""
+
 import example1
 
 

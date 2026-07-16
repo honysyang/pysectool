@@ -75,3 +75,4 @@ Thumbs.db
 # Project specific
 python_packager_*/
 *.log
+src/*.egg-info/

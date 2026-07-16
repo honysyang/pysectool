@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "python-packager"
+version = "0.2.0"
+description = "Python 源文件打包工具（支持 .so/.pyd/.exe）"
+readme = "README.md"
+license = {text = "GPL-3.0"}
+authors = [
+    {name = "yangzhongjie"},
+]
+requires-python = ">=3.9"
+dependencies = [
+    "setuptools",
+    "wheel",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: Software Development :: Build Tools",
+]
+
+[project.optional-dependencies]
+cython = ["Cython>=0.29"]
+pyinstaller = ["PyInstaller>=5.0"]
+all = ["Cython>=0.29", "PyInstaller>=5.0"]
+
+[project.scripts]
+python-packager = "pysectool.cli:main"
+
+[project.urls]
+Source = "https://github.com/honysyang/pysectool"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pylint.main]
+ignore-paths = ["^examples/"]
+
+[tool.pylint.format]
+max-line-length = 100
+
+[tool.pylint.design]
+max-args = 7
+max-positional-arguments = 7
+max-attributes = 10
+max-locals = 20
+
+[tool.pylint.messages_control]
+disable = [
+    "missing-docstring",
+    "too-few-public-methods",
+]
+
+[tool.pylint.typecheck]
+generated-members = ["subprocess.run"]
