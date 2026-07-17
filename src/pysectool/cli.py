@@ -9,6 +9,7 @@ import sys
 from pysectool.exceptions import PythonPackagerError
 from pysectool.log import configure_logging, get_logger
 from pysectool.packager import PythonPackager
+from pysectool.version import __version__
 
 logger = get_logger()
 
@@ -29,6 +30,12 @@ def create_parser() -> argparse.ArgumentParser:
             "  python-packager my_project/ -o ./dist -f so --clean"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+        help="显示版本信息并退出",
     )
     parser.add_argument("source_path", help="要打包的 Python 源文件或文件夹")
     parser.add_argument("-o", "--output", help="输出目录")

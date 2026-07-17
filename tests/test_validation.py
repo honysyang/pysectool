@@ -101,3 +101,36 @@ class TestValidateOutputDir(unittest.TestCase):
                     validate_output_dir(output, src)
             finally:
                 os.chmod(output, stat.S_IRWXU)
+
+    def test_rejects_symlink_output(self) -> None:
+        """输出目录是符号链接时应报错，防止误删链接目标。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            src = Path(tmp) / "src.py"
+            src.write_text("pass", encoding="utf-8")
+            real_dir = Path(tmp) / "real_dir"
+            real_dir.mkdir()
+            link = Path(tmp) / "output_link"
+            link.symlink_to(real_dir)
+            with self.assertRaises(PythonPackagerError):
+                validate_output_dir(link, src)
+
+    def test_rejects_clean_with_default_output(self) -> None:
+        """--clean 与默认输出目录（源路径所在目录）组合时应报错。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            src_dir = Path(tmp) / "project"
+            src_dir.mkdir()
+            src = src_dir / "main.py"
+            src.write_text("pass", encoding="utf-8")
+            with self.assertRaises(PythonPackagerError):
+                validate_output_dir(src_dir, src, clean=True)
+
+    def test_allows_clean_with_explicit_output(self) -> None:
+        """--clean 与显式独立输出目录组合时应通过。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            src_dir = Path(tmp) / "project"
+            src_dir.mkdir()
+            src = src_dir / "main.py"
+            src.write_text("pass", encoding="utf-8")
+            output = Path(tmp) / "dist"
+            validate_output_dir(output, src, clean=True)
+            self.assertTrue(output.is_dir())

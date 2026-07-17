@@ -9,8 +9,7 @@
 from pysectool.cli import main
 from pysectool.exceptions import PythonPackagerError
 from pysectool.packager import PythonPackager
-
-__version__ = "0.2.0"
+from pysectool.version import __version__
 
 __all__ = [
     "PythonPackager",

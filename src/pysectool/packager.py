@@ -48,11 +48,15 @@ class PythonPackager:
             clean: 是否在打包前清空输出目录。
         """
         self.source_path = safe_resolve_path(source_path, must_exist=True)
-        self.output_dir = (
-            safe_resolve_path(output_dir, must_exist=False)
-            if output_dir
-            else self.source_path.parent
-        )
+        if output_dir:
+            raw_output = Path(output_dir)
+            if raw_output.is_symlink():
+                raise PythonPackagerError(
+                    f"输出目录不能是符号链接: {output_dir}"
+                )
+            self.output_dir = safe_resolve_path(output_dir, must_exist=False)
+        else:
+            self.output_dir = self.source_path.parent
         self.package_format = package_format.lower()
         self.include_deps = include_deps
         self.optimize = optimize
@@ -66,7 +70,7 @@ class PythonPackager:
         self.banner = BannerLoader(self.banner_file).load()
 
         # 前置校验输出目录，避免构建到一半才发现不可写
-        validate_output_dir(self.output_dir, self.source_path)
+        validate_output_dir(self.output_dir, self.source_path, clean=self.clean)
 
     def _validate_format(self) -> None:
         """校验源路径与输出格式。"""

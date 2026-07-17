@@ -53,6 +53,13 @@ class TestArgumentParser(unittest.TestCase):
         with self.assertRaises(SystemExit):
             parser.parse_args(["foo.py", "-f", "zip"])
 
+    def test_version_flag(self) -> None:
+        """--version 应正常退出并显示版本号。"""
+        parser = create_parser()
+        with self.assertRaises(SystemExit) as ctx:
+            parser.parse_args(["--version"])
+        self.assertEqual(ctx.exception.code, 0)
+
     def test_exclude_data_parsed(self) -> None:
         """--exclude-data 应支持多次使用并收集为列表。"""
         parser = create_parser()
